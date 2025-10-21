@@ -1,7 +1,17 @@
-# tests/conftest.py
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]  # корень репозитория
+import pytest
+
+from app.db import Base, engine
+
+ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
+
+
+@pytest.fixture(autouse=True)
+def clear_db():
+    Base.metadata.drop_all(bind=engine)
+    Base.metadata.create_all(bind=engine)
+    yield
