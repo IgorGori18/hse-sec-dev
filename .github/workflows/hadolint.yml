@@ -1,0 +1,17 @@
+name: Hadolint
+
+on:
+  pull_request:
+  push:
+    branches: [main, p07-container-hardening]
+
+jobs:
+  hadolint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Run hadolint
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: Dockerfile
