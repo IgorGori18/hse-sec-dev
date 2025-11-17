@@ -32,6 +32,9 @@ jobs:
           isort --check-only .
 
       - name: Tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+          CI: "true"
         run: pytest -q
 
       - name: Pre-commit (all files)
