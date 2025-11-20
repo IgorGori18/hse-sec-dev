@@ -28,4 +28,4 @@ class ItemOut(ItemBase):
     owner_id: int
 
     class Config:
-        from_attributes = True  # для pydantic v2; для v1 можно убрать
+        from_attributes = True

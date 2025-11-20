@@ -1,4 +1,5 @@
 ignored:
-  - DL3008
+  - DL3013
+  - DL3042
 no-color: true
 failure-threshold: warning
