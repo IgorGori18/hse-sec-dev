@@ -1,41 +1,110 @@
-name: CI
+name: CI/CD
+
 on:
-  pull_request:
   push:
-    branches: [main]
-permissions:
-  contents: read
+    paths-ignore:
+      - "README.md"
+  pull_request:
+
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ci-${{ github.ref }}-${{ github.workflow }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
-  build:
+
+  tests:
+    name: Lint & Tests (Python ${{ matrix.python-version }})
     runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+
+    env:
+      CI: "true"
+      PYTHONPATH: ${{ github.workspace }}
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      JWT_SECRET: ${{ secrets.JWT_SECRET }}
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
-          cache: "pip"
+          python-version: ${{ matrix.python-version }}
 
-      - name: Install dependencies
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('requirements*.txt') }}
+          restore-keys: |
+            pip-${{ runner.os }}-${{ matrix.python-version }}-
+            pip-${{ runner.os }}-
+
+      - name: Install deps
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt -r requirements-dev.txt
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
 
-      - name: Lint & Format
+      - name: Ruff
+        run: ruff check .
+
+      - name: Black
+        run: black --check .
+
+      - name: isort
+        run: isort --check-only .
+
+      - name: Run pytest with junit + coverage
         run: |
-          ruff check --output-format=github .
-          black --check .
-          isort --check-only .
+          mkdir -p reports
+          pytest -q \
+            --junitxml=reports/junit-${{ matrix.python-version }}.xml \
+            --cov=app \
+            --cov-report=xml:reports/coverage-${{ matrix.python-version }}.xml
 
-      - name: Tests
-        env:
-          PYTHONPATH: ${{ github.workspace }}
-          CI: "true"
-        run: pytest -q
+      - name: Upload reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: reports-${{ matrix.python-version }}
+          path: reports/
 
-      - name: Pre-commit (all files)
-        run: pre-commit run --all-files
+      - name: Build wheel
+        run: |
+          pip install build
+          mkdir -p .build_tmp
+          cp -r app pyproject.toml .build_tmp/
+          cd .build_tmp
+          python -m build --wheel
+          mkdir -p ../dist_wheel
+          cp dist/*.whl ../dist_wheel/
+
+      - name: Upload wheel artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: wheel-${{ matrix.python-version }}
+          path: dist_wheel/
+
+  deploy-mock:
+    name: Mock Deploy (Staging)
+    needs: tests
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+      - name: Mock deploy
+        run: |
+          echo "Deploying to staging..."
+          echo "DATABASE_URL masked: ${{ secrets.DATABASE_URL }}"
+          echo "JWT_SECRET masked: ${{ secrets.JWT_SECRET }}"
+          echo "Done (mock deploy)."

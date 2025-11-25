@@ -1,3 +1,4 @@
+![CI](https://github.com/IgorGori18/hse-sec-dev/actions/workflows/ci.yml/badge.svg)
 # SecDev Course Template
 
 Стартовый шаблон для студенческого репозитория (HSE SecDev 2025).
