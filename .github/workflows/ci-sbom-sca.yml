@@ -1,0 +1,74 @@
+name: Security - SBOM & SCA
+
+on:
+  push:
+    paths:
+      - "requirements*.txt"
+      - "app/**/*.py"
+      - ".github/workflows/ci-sbom-sca.yml"
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sbom-sca-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  sbom-sca:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Ensure evidence directory exists
+        run: mkdir -p EVIDENCE/P09
+
+      # SBOM — Syft JSON
+      - name: Generate SBOM (Syft v1.14.0)
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}:/work -w /work \
+            ghcr.io/anchore/syft:v1.14.0 \
+            dir:/work -o syft-json > EVIDENCE/P09/sbom.json
+
+          # Add commit trace
+          jq --arg commit "${{ github.sha }}" '. + {commit: $commit}' \
+            EVIDENCE/P09/sbom.json > EVIDENCE/P09/_tmp && mv EVIDENCE/P09/_tmp EVIDENCE/P09/sbom.json
+
+      # SCA
+      - name: Scan vulnerabilities (Grype v0.77.0)
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}:/work -w /work \
+            ghcr.io/anchore/grype:v0.77.0 \
+            sbom:/work/EVIDENCE/P09/sbom.json -o json > EVIDENCE/P09/sca_report.json
+
+      # Summary
+      - name: Generate SCA summary
+        run: |
+          echo "# SCA Summary for commit ${{ github.sha }}" > EVIDENCE/P09/sca_summary.md
+          jq '[.matches[].vulnerability.severity] | group_by(.) | map({(.[0]): length}) | add' \
+            EVIDENCE/P09/sca_report.json >> EVIDENCE/P09/sca_summary.md || true
+
+      # Upload artifacts
+      - name: Upload SBOM
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-${{ github.sha }}
+          path: EVIDENCE/P09/sbom.json
+
+      - name: Upload SCA report
+        uses: actions/upload-artifact@v4
+        with:
+          name: sca-report-${{ github.sha }}
+          path: EVIDENCE/P09/sca_report.json
+
+      - name: Upload SCA summary
+        uses: actions/upload-artifact@v4
+        with:
+          name: sca-summary-${{ github.sha }}
+          path: EVIDENCE/P09/sca_summary.md

@@ -1,0 +1,7 @@
+version: 1
+waivers:
+  - id: "CVE-2023-32681"
+    package: "urllib3"
+    reason: "Используется транзитивно через requests; риск низкий, трафик в проекте внутренний"
+    issue: "https://github.com/IgorGori18/hse-sec-dev/issues/12"
+    expires: "2025-12-31"
