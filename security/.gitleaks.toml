@@ -1,0 +1,29 @@
+title = "StudyPlanner P10 Gitleaks config"
+
+[[rules]]
+id = "aws-access-key-id"
+description = "AWS access key id"
+regex = '''AKIA[0-9A-Z]{16}'''
+tags = ["key", "AWS"]
+
+[[rules]]
+id = "generic-api-key"
+description = "Generic assignment of API keys, secrets or tokens"
+regex = '''(?i)(?:api[_-]?key|secret|token)\s*[:=]\s*['\"][A-Za-z0-9_\-]{8,}['\"]'''
+tags = ["generic", "credential"]
+
+[[rules]]
+id = "private-key-block"
+description = "Private key block"
+regex = '''-----BEGIN (?:EC|RSA|DSA)? ?PRIVATE KEY-----'''
+tags = ["key", "private"]
+
+[allowlist]
+description = "Unit tests intentionally use dummy credentials; suppress as false positives"
+files = [
+  '''tests/test_auth_items.py''',
+  '''tests/test_errors.py'''
+]
+regexes = [
+  '''(?i)password123'''
+]
