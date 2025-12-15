@@ -58,7 +58,7 @@ jobs:
 
       - name: Run ZAP baseline
         run: |
-          docker run --rm --network host -u zap \
+          docker run --rm --network host -u 0 \
             -v "${{ github.workspace }}/EVIDENCE/P11:/zap/wrk" \
             ghcr.io/zaproxy/zaproxy:stable \
             zap-baseline.py \
@@ -68,6 +68,12 @@ jobs:
               -m 5 \
               -T 60 \
               -I
+
+      - name: Verify ZAP reports
+        run: |
+          ls -l EVIDENCE/P11
+          test -f EVIDENCE/P11/zap_baseline.html
+          test -f EVIDENCE/P11/zap_baseline.json
 
       - name: App logs
         if: always()
