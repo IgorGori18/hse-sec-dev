@@ -1,0 +1,10 @@
+{
+  "createdAt": "2024-05-08T10:00:00Z",
+  "scanTarget": ".",
+  "rules": [
+    "aws-access-key-id",
+    "generic-api-key",
+    "private-key-block"
+  ],
+  "leaks": []
+}

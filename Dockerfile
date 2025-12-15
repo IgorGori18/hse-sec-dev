@@ -2,9 +2,11 @@ FROM python:3.12-slim AS build
 WORKDIR /app
 
 COPY requirements.txt .
+
 RUN --mount=type=cache,target=/root/.cache \
     pip install --upgrade pip && \
     pip wheel --wheel-dir=/wheels -r requirements.txt
+
 
 FROM python:3.12-slim AS runtime
 
@@ -16,13 +18,14 @@ WORKDIR /app
 RUN groupadd -r app && useradd -r -g app app
 
 COPY --from=build /wheels /wheels
-RUN --mount=type=cache,target=/root/.cache pip install --no-cache-dir /wheels/*
 
-COPY . .
+RUN --mount=type=cache,target=/root/.cache \
+    pip install --no-cache-dir /wheels/* && \
+    rm -rf /wheels
+
+COPY --chown=app:app . .
 
 RUN mkdir -p /app/db && chown -R app:app /app/db
-
-RUN echo "{\"defaultAction\": \"SCMP_ACT_ERRNO\", \"syscalls\": []}" > /seccomp.json
 
 USER app
 

@@ -1,0 +1,29 @@
+rules:
+  - id: studyplanner-hardcoded-admin-password
+    message: "Avoid shipping default accounts with hardcoded credentials."
+    severity: WARNING
+    languages:
+      - python
+    metadata:
+      cwe: "CWE-798"
+      references:
+        - "https://cwe.mitre.org/data/definitions/798.html"
+      category: security
+    pattern-either:
+      - pattern: hash_password("admin")
+      - pattern: hash_password("password")
+    fix: "Load the initial admin credentials from an environment-specific secret."
+
+  - id: studyplanner-inmemory-token-store
+    message: "In-memory auth token storage does not survive restarts and may leak in prod logs."
+    severity: INFO
+    languages:
+      - python
+    metadata:
+      cwe: "CWE-255"
+      references:
+        - "https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html"
+      category: security
+    patterns:
+      - pattern: |
+          TOKENS[$TOKEN] = $VALUE
